@@ -1,5 +1,6 @@
 import pandas as pd
 from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Integer, String, Numeric
 
 def etl_dim_product(source_conn_str, target_conn_str):
     """
@@ -72,13 +73,27 @@ def etl_dim_product(source_conn_str, target_conn_str):
     try:
         # Connexion au Data Warehouse
         target_engine = create_engine(target_conn_str)
-        
+        # Définition des types de données SQL Server explicites
+        dtype_mapping = {
+            'ProductID': Integer(),  # Utilisation de Integer() pour ProductID
+            'ProductName': String(100),  # Utilisation de String(100) pour ProductName
+            'ProductNumber': String(25),  # Utilisation de String(25) pour ProductNumber
+            'Color': String(15),  # Utilisation de String(15) pour Color
+            'Size': String(15),  # Utilisation de String(5) pour Size
+            'Weight': Numeric(8, 2),  # Utilisation de Numeric(8, 2) pour Weight
+            'ProductLine': String(10),  # Utilisation de String(10) pour ProductLine
+            'Class': String(10),  # Utilisation de String(10) pour Class
+            'Style': String(10),  # Utilisation de String(10) pour Style
+            'ProductSubcategoryID': Integer(),  # Utilisation de Integer() pour ProductSubcategoryID
+            'ProductCategoryID': Integer()
+        }
         # Chargement dans DimProduct (mode append)
         df_product.to_sql(
             'DimProduct', 
             target_engine, 
-            if_exists='append', 
+            if_exists='replace', 
             index=False,
+            dtype=dtype_mapping
            
         )
         print(f"Chargement réussi : {len(df_product)} lignes ajoutées à DimProduct")

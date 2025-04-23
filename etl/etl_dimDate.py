@@ -1,6 +1,7 @@
 import pandas as pd
 from sqlalchemy import create_engine
 from datetime import datetime, timedelta
+from sqlalchemy import Integer, Date, SmallInteger
 
 def etl_dim_date(start_date, end_date, target_conn_str):
     """
@@ -41,13 +42,13 @@ def etl_dim_date(start_date, end_date, target_conn_str):
         
         # Définition des types SQL pour optimisation
         dtype = {
-            'DateID': 'INT PRIMARY KEY',
-            'Date': 'DATE',
-            'Day': 'SMALLINT',
-            'Month': 'SMALLINT',
-            'Year': 'SMALLINT',
-            'Quarter': 'SMALLINT',
-            'Week': 'SMALLINT'
+            'DateID': Integer,  # Utilisation de Integer de SQLAlchemy
+            'Date': Date,       # Utilisation de Date de SQLAlchemy
+            'Day': SmallInteger,  # Utilisation de SmallInteger de SQLAlchemy
+            'Month': SmallInteger,
+            'Year': SmallInteger,
+            'Quarter': SmallInteger,
+            'Week': SmallInteger
         }
         
         df_date.to_sql('DimDate', engine, if_exists='replace', index=False, dtype=dtype)

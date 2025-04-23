@@ -1,5 +1,6 @@
 import pandas as pd
 from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Integer, DateTime, Numeric
 
 def etl_fact_production(source_conn_str, target_conn_str):
     """
@@ -40,7 +41,10 @@ def etl_fact_production(source_conn_str, target_conn_str):
         
         # Conversion des dates en DateID
         df['StartDateID'] = pd.to_datetime(df['StartDate']).dt.strftime('%Y%m%d').astype(int)
-        df['EndDateID'] = pd.to_datetime(df['EndDate']).dt.strftime('%Y%m%d').astype(int)
+        # Gérer les EndDate nulles en les remplaçant par -1 dans EndDateID
+        df['EndDateID'] = pd.to_datetime(df['EndDate'], errors='coerce')  # convertit NaT si problème
+        df['EndDateID'] = df['EndDateID'].dt.strftime('%Y%m%d')
+        df['EndDateID'] = df['EndDateID'].fillna(-1).astype(int)
         
         # Nettoyage
         df['StandardCost'] = df['StandardCost'].fillna(0).round(4)
@@ -67,7 +71,15 @@ def etl_fact_production(source_conn_str, target_conn_str):
             'StandardCost',
             'AverageCost'
         ]]
-        
+        dtype_mapping = {
+            'ProductID': Integer,  # Integer pour ProductID
+            'StartDateID': Integer,  # Integer pour StartDateID
+            'EndDateID': Integer,  # Integer pour EndDateID
+            'StandardCost': Numeric(19, 4),  # DECIMAL(19,4) pour StandardCost
+            'AverageCost': Numeric(19, 4)  # DECIMAL(19,4) pour AverageCost
+    
+        }
+
        
         
         # Chargement
@@ -76,6 +88,7 @@ def etl_fact_production(source_conn_str, target_conn_str):
             target_engine,
             if_exists='replace',
             index=False,
+            dtype=dtype_mapping
             
         )
         print(f"Chargement réussi : {len(df_final)} lignes")

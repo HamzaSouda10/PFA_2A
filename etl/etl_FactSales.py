@@ -1,5 +1,6 @@
-from pandas import pd
+import pandas as pd
 from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Integer, SmallInteger, DateTime, Numeric
 
 def etl_fact_sales(source_conn_str, target_conn_str):
     try:
@@ -24,8 +25,8 @@ def etl_fact_sales(source_conn_str, target_conn_str):
                 d.LineTotal,
                 h.Freight,
                 h.TotalDue
-            FROM AdventureWorks.Sales.SalesOrderHeader AS h
-            JOIN AdventureWorks.Sales.SalesOrderDetail AS d 
+            FROM AdventureWorks2022.Sales.SalesOrderHeader AS h
+            JOIN AdventureWorks2022.Sales.SalesOrderDetail AS d 
                 ON h.SalesOrderID = d.SalesOrderID
         """
         
@@ -40,14 +41,32 @@ def etl_fact_sales(source_conn_str, target_conn_str):
         # Establish target connection
         target_engine = create_engine(target_conn_str)
         
+        # Définition des types de données SQL Server explicites
+        dtype_mapping = {
+            'SaleID': Integer,
+            'SalesOrderID': Integer,
+            'ProductID': Integer,
+            'CustomerID': Integer,
+            'SalesPersonID': Integer,
+            'SpecialOfferID': Integer,
+            'OrderDate': DateTime,
+            'ShipDate': DateTime,
+            'TerritoryID': Integer,
+            'OrderQty': SmallInteger,
+            'UnitPrice': Numeric(precision=19, scale=4),  # MONEY en SQL Server
+            'UnitPriceDiscount': Numeric(precision=19, scale=4),  # MONEY en SQL Server
+            'LineTotal': Numeric(precision=19, scale=4),  # MONEY en SQL Server
+            'Freight': Numeric(precision=19, scale=4),  # MONEY en SQL Server
+            'TotalDue': Numeric(precision=19, scale=4)  # MONEY en SQL Server
+        }
         # Load into FactSales
         df_sales.to_sql(
             'FactSales',
             target_engine,
-            if_exists='append',
+            if_exists='replace',
             index=False,
-            method='multi',  # For better performance with bulk inserts
-            chunksize=1000
+            dtype=dtype_mapping
+            
         )
         print(f"Loading successful: {len(df_sales)} rows added to FactSales")
         

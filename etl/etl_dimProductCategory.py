@@ -1,5 +1,6 @@
 import pandas as pd
 from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Integer, String
 
 def etl_dim_product_category(source_conn_str, target_conn_str):
     """
@@ -34,7 +35,11 @@ def etl_dim_product_category(source_conn_str, target_conn_str):
     try:
         target_engine = create_engine(target_conn_str)
         
-       
+        # Définition des types de données explicites
+        dtype_mapping = {
+             'CategoryID': Integer(),  # Utilisation de Integer() pour la clé primaire
+            'CategoryName': String(50) 
+        }
         
         # Chargement avec remplacement de la table existante
         df_category.to_sql(
@@ -42,6 +47,7 @@ def etl_dim_product_category(source_conn_str, target_conn_str):
             target_engine,
             if_exists='replace',
             index=False,
+            dtype=dtype_mapping
             
         )
         print(f"Chargement réussi : {len(df_category)} catégories insérées")
@@ -49,11 +55,3 @@ def etl_dim_product_category(source_conn_str, target_conn_str):
     except Exception as e:
         print(f"Erreur lors du chargement : {e}")
 
-# Exemple d'utilisation
-if __name__ == "__main__":
-    # Configuration des connexions (à adapter)
-    SOURCE_DB = "sqlserver://user:password@server/AdventureWorks"
-    TARGET_DB = "postgresql://dw_user:dw_password@dw-server/datawarehouse"
-    
-    # Exécution du processus ETL
-    etl_dim_product_category(SOURCE_DB, TARGET_DB)

@@ -1,5 +1,6 @@
 import pandas as pd
 from sqlalchemy import create_engine
+from sqlalchemy import create_engine, String, Integer
 
 def etl_dim_customer(source_conn_str, target_conn_str):
     try:
@@ -20,10 +21,10 @@ def etl_dim_customer(source_conn_str, target_conn_str):
                 a.City,
                 sp.Name AS StateProvince,
                 cr.Name AS CountryRegion
-            FROM AdventureWorks.Sales.Customer AS c
-                LEFT JOIN AdventureWorks.Person.Person AS p 
+            FROM AdventureWorks2022.Sales.Customer AS c
+                LEFT JOIN AdventureWorks2022.Person.Person AS p 
                     ON c.PersonID = p.BusinessEntityID
-                LEFT JOIN AdventureWorks.Sales.Store AS s 
+                LEFT JOIN AdventureWorks2022.Sales.Store AS s 
                     ON c.StoreID = s.BusinessEntityID
                 CROSS APPLY (
                     SELECT 
@@ -32,17 +33,17 @@ def etl_dim_customer(source_conn_str, target_conn_str):
                             ELSE s.BusinessEntityID 
                         END AS BEID
                 ) AS be
-                LEFT JOIN AdventureWorks.Person.EmailAddress AS e 
+                LEFT JOIN AdventureWorks2022.Person.EmailAddress AS e 
                     ON e.BusinessEntityID = be.BEID
-                LEFT JOIN AdventureWorks.Person.PersonPhone AS ph 
+                LEFT JOIN AdventureWorks2022.Person.PersonPhone AS ph 
                     ON ph.BusinessEntityID = be.BEID
-                LEFT JOIN AdventureWorks.Person.BusinessEntityAddress AS bea 
+                LEFT JOIN AdventureWorks2022.Person.BusinessEntityAddress AS bea 
                     ON bea.BusinessEntityID = be.BEID
-                LEFT JOIN AdventureWorks.Person.Address AS a 
+                LEFT JOIN AdventureWorks2022.Person.Address AS a 
                     ON a.AddressID = bea.AddressID
-                LEFT JOIN AdventureWorks.Person.StateProvince AS sp 
+                LEFT JOIN AdventureWorks2022.Person.StateProvince AS sp 
                     ON sp.StateProvinceID = a.StateProvinceID
-                LEFT JOIN AdventureWorks.Person.CountryRegion AS cr 
+                LEFT JOIN AdventureWorks2022.Person.CountryRegion AS cr 
                     ON cr.CountryRegionCode = sp.CountryRegionCode
         """
         
@@ -57,13 +58,29 @@ def etl_dim_customer(source_conn_str, target_conn_str):
         # Target connection
         target_engine = create_engine(target_conn_str)
         
+                # Define explicit data types for SQL Server
+        dtype_mapping = {
+            'CustomerID': Integer,  # Integer pour CustomerID
+            'FirstName': String(50),  # NVARCHAR(50) pour FirstName
+            'LastName': String(50),  # NVARCHAR(50) pour LastName
+            'CompanyName': String(100),  # NVARCHAR(100) pour CompanyName
+            'EmailAddress': String(100),  # NVARCHAR(100) pour EmailAddress
+            'Phone': String(25),  # NVARCHAR(25) pour Phone
+            'AddressLine1': String(100),  # NVARCHAR(100) pour AddressLine1
+            'AddressLine2': String(100),  # NVARCHAR(100) pour AddressLine2
+            'City': String(50),  # NVARCHAR(50) pour City
+            'StateProvince': String(50),  # NVARCHAR(50) pour StateProvince
+            'CountryRegion': String(50),  # NVARCHAR(50) pour CountryRegion
+        }
+        
         # Load into DimCustomer (append mode)
         df_customer.to_sql(
             'DimCustomer', 
             target_engine, 
-            if_exists='append', 
-            index=False
-        )
+            if_exists='replace', 
+            index=False,
+            dtype=dtype_mapping
+            )
         print(f"Loading successful: {len(df_customer)} rows added to DimCustomer")
         
     except Exception as e:

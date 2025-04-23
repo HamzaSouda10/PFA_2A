@@ -1,6 +1,6 @@
-from pandas import pd
+import pandas as pd
 from sqlalchemy import create_engine
-
+from sqlalchemy import create_engine, String, Integer
 
 def etl_dim_region(source_conn_str, target_conn_str):
     try:
@@ -14,7 +14,7 @@ def etl_dim_region(source_conn_str, target_conn_str):
                 [Name],
                 [CountryRegionCode],
                 [Group]
-            FROM [AdventureWorks].[Sales].[SalesTerritory]
+            FROM [AdventureWorks2022].[Sales].[SalesTerritory]
         """
         
         df_region = pd.read_sql(query, source_engine)
@@ -28,12 +28,21 @@ def etl_dim_region(source_conn_str, target_conn_str):
         # Establish target connection
         target_engine = create_engine(target_conn_str)
         
+        # Définition des types de données SQL Server explicites
+        dtype_mapping = {
+            'TerritoryID': Integer,  # Integer pour TerritoryID
+            'Name': String(50),  # NVARCHAR(50) pour Name
+            'CountryRegionCode': String(3),  # NVARCHAR(3) pour CountryRegionCode
+            'Group': String(50),
+        }
+        
         # Load into DimRegion
         df_region.to_sql(
             'DimRegion',
             target_engine,
-            if_exists='append',
-            index=False
+            if_exists='replace',
+            index=False,
+            dtype=dtype_mapping
         )
         print(f"Loading successful: {len(df_region)} rows added to DimRegion")
         

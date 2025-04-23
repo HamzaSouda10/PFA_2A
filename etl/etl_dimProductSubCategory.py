@@ -1,5 +1,6 @@
 import pandas as pd
 from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Integer, String
 
 def etl_dim_product_subcategory(source_conn_str, target_conn_str):
     """
@@ -53,7 +54,12 @@ def etl_dim_product_subcategory(source_conn_str, target_conn_str):
         target_engine = create_engine(target_conn_str)
         
         # Définition des types SQL pour optimisation
-       
+        # Définition des types de données et contraintes
+        dtype_mapping = {
+            'SubcategoryID': Integer(),  # Utilisation de Integer() pour la clé primaire
+            'SubcategoryName': String(50),  # Utilisation de String(50) pour la chaîne
+            'CategoryID': Integer()
+        }
         
         # Chargement dans DimProductSubcategory (remplace la table existante)
         df_subcategory.to_sql(
@@ -61,6 +67,7 @@ def etl_dim_product_subcategory(source_conn_str, target_conn_str):
             target_engine, 
             if_exists='replace', 
             index=False,
+            dtype=dtype_mapping
             
         )
         print(f"Chargement réussi : {len(df_subcategory)} sous-catégories ajoutées")
