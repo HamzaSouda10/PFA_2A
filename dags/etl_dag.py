@@ -10,6 +10,9 @@ from etl.etl_DimCustomer import etl_dim_customer
 from etl.etl_DimRegion import etl_dim_region
 from etl.etl_DimSpecialOffer import etl_dim_special_offer
 from etl.etl_FactSales import etl_fact_sales
+from etl.etl_DimEmploye import etl_dim_employee
+from etl.etl_DimLocation import etl_dim_location
+from etl.etl_FactInventory import etl_fact_inventory
 
 # 1. Connexion à la source (AdventureWorks)
 server_name = "host.docker.internal,1433"  # Ex: "localhost\\SQLEXPRESS"
@@ -56,6 +59,17 @@ def run_etl_fact_production():
 
 def run_etl_fact_sales():
     etl_fact_sales(SOURCE_CONN_STR, TARGET_CONN_STR)
+    
+def run_etl_dim_employee():
+    etl_dim_employee(SOURCE_CONN_STR, TARGET_CONN_STR)
+    
+def run_etl_dim_location():
+    etl_dim_location(SOURCE_CONN_STR, TARGET_CONN_STR)
+
+def run_etl_fact_inventory():
+    etl_fact_inventory(SOURCE_CONN_STR, TARGET_CONN_STR)
+
+
 
 default_args = {
     'owner': 'airflow',
@@ -66,7 +80,7 @@ default_args = {
 with DAG(
     dag_id='adventureworks_etl_dag',
     default_args=default_args,
-    schedule_interval=None,
+    schedule_interval='@monthly',
     catchup=False,
     tags=['adventureworks']
 ) as dag:
@@ -106,6 +120,15 @@ with DAG(
         task_id='load_dim_special_offer',
         python_callable=run_etl_dim_special_offer
     )
+    
+    task_dim_employee = PythonOperator(
+        task_id='load_dim_employee',
+        python_callable=run_etl_dim_employee
+)
+    task_dim_location = PythonOperator(
+        task_id='load_dim_location',
+        python_callable=run_etl_dim_location
+    )
 
     # Fact tables
     task_fact_production = PythonOperator(
@@ -117,14 +140,49 @@ with DAG(
         task_id='load_fact_sales',
         python_callable=run_etl_fact_sales
     )
+    
+    task_fact_inventory = PythonOperator(
+        task_id='load_fact_inventory',
+        python_callable=run_etl_fact_inventory
+    )
+    
+    
+    
+  
 
-    # Dépendances logiques (exemple simple)
-    task_dim_date >> [task_dim_product_category, task_dim_customer, task_dim_region, task_dim_special_offer]
+    # Dépendances logiques 
+    
+
+    # DimDate d'abord (car tous les faits en dépendent)
+    task_dim_date >> task_dim_product_category
+    task_dim_product_category >> task_dim_product_subcategory
+    task_dim_product_subcategory >> task_dim_product
+
+    # Séquence des dimensions : une par une pour éviter le parallélisme excessif
+    task_dim_product >> task_dim_customer
+    task_dim_customer >> task_dim_region
+    task_dim_region >> task_dim_special_offer
+    task_dim_special_offer >> task_dim_employee
+    task_dim_employee >> task_dim_location
+
+    # Puis les faits (dépendent de toutes les dimensions nécessaires)
+    task_dim_location >> [task_fact_inventory, task_fact_production, task_fact_sales]
+    task_dim_product >> [task_fact_inventory, task_fact_production, task_fact_sales]
+    task_dim_date >> [task_fact_inventory, task_fact_production, task_fact_sales]
+
+    """ task_dim_date >> [task_dim_product_category, task_dim_customer, task_dim_region, task_dim_special_offer, task_dim_employee]
 
     task_dim_product_category >> task_dim_product_subcategory >> task_dim_product
 
     task_dim_product >> task_fact_production
+    task_dim_product >> task_fact_sales
     task_dim_customer >> task_fact_sales
     task_dim_region >> task_fact_sales
     task_dim_special_offer >> task_fact_sales
-    task_dim_date >> [task_fact_production, task_fact_sales]
+    task_dim_employee >> task_fact_sales
+    task_dim_location >> task_fact_inventory
+    task_dim_product >> task_fact_inventory
+    task_dim_date >> [task_fact_production, task_fact_sales,task_fact_inventory]"""
+    
+    
+    
