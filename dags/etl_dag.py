@@ -20,7 +20,7 @@ database_name = "AdventureWorks2022"
 
 # Connexions (remplace par les vraies infos)
 SOURCE_CONN_STR = (
-    f"mssql+pyodbc://etl_user:yourStrongPassword123!@{server_name}/{database_name}?"
+    f"mssql+pyodbc://user:Password!@{server_name}/{database_name}?"
     "driver=ODBC+Driver+17+for+SQL+Server"
 )
 # 2. Connexion au Data Warehouse (cible)
@@ -74,7 +74,7 @@ def run_etl_fact_inventory():
 default_args = {
     'owner': 'airflow',
     'start_date': datetime(2024, 1, 1),
-    'retries': 1,
+    'retries': 3,
 }
 
 with DAG(
